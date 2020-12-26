@@ -1,7 +1,7 @@
 import { AppSyncResolverEvent } from "aws-lambda";
 import { Url, MutationShortenArgs } from "../graphql/types";
 import { DynamoDB } from "aws-sdk";
-import {PutItemInput} from "aws-sdk/clients/dynamodb";
+import { PutItemInput } from "aws-sdk/clients/dynamodb";
 
 // The event passed looks like this.
 /*
@@ -45,6 +45,7 @@ const event = {
 export const handler = async (
   event: AppSyncResolverEvent<MutationShortenArgs>
 ): Promise<Url> => {
+  console.log(JSON.stringify({ v: process.env.VERSION }));
   const db = new DynamoDB.DocumentClient();
   await db
     .put({

@@ -2,7 +2,7 @@ import * as cdk from "@aws-cdk/core";
 import * as appsync from "@aws-cdk/aws-appsync";
 import * as db from "@aws-cdk/aws-dynamodb";
 import * as lambda from "@aws-cdk/aws-lambda";
-import {BillingMode} from "@aws-cdk/aws-dynamodb";
+import * as codedeploy from "@aws-cdk/aws-codedeploy";
 
 export class ShortenStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -34,6 +34,10 @@ export class ShortenStack extends cdk.Stack {
     });
 
     // Create a Lambda and DynamoDB table.
+    //TODO: Get a global version number from the git commit hash, or git history etc.
+    //TODO: e.g. git rev-list --count HEAD
+    const versionNumber = new Date().toISOString();
+
     const mutationShortenLambda = new lambda.Function(
       this,
       "mutationShortenLambda",
@@ -42,18 +46,42 @@ export class ShortenStack extends cdk.Stack {
         handler: "index.handler",
         code: lambda.Code.fromAsset("./functions"),
         memorySize: 1024,
+        description: `Build time: ${versionNumber}`,
       }
     );
+    mutationShortenLambda.addEnvironment("VERSION", versionNumber);
     // Add a database table and grant read/write access to the Lambda.
     const shortenDb = new db.Table(this, "shortenDb", {
       partitionKey: {
         name: "_id",
         type: db.AttributeType.STRING,
       },
-      billingMode: BillingMode.PAY_PER_REQUEST,
+      billingMode: db.BillingMode.PAY_PER_REQUEST,
     });
     shortenDb.grantReadWriteData(mutationShortenLambda);
     mutationShortenLambda.addEnvironment("DYNAMO_TABLE", shortenDb.tableName);
+
+    // Deploy the Lambda using a canary release.
+    const application = new codedeploy.LambdaApplication(
+      this,
+      "apiDeployment",
+      { applicationName: "apiDeployment" }
+    );
+    const version = mutationShortenLambda.addVersion(versionNumber);
+    const version1Alias = new lambda.Alias(
+      this,
+      "mutationShortenVersionAlias",
+      {
+        aliasName: "prod",
+        version,
+      }
+    );
+    new codedeploy.LambdaDeploymentGroup(this, "canaryDeployment", {
+      application,
+      alias: version1Alias,
+      deploymentConfig:
+        codedeploy.LambdaDeploymentConfig.LINEAR_10PERCENT_EVERY_1MINUTE,
+    });
 
     // Set up the Lambda to handle the mutation part of the GraphQL.
     const mutationShortenLambdaDS = api.addLambdaDataSource(
