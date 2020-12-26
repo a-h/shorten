@@ -1,0 +1,15 @@
+type URL {
+  id: ID!
+  short: String!
+  long: String!
+  count: Int!
+}
+type Query {
+  getUrl(id: ID!): [ URL! ]
+}
+input ShortenInput {
+  url: String!
+}
+type Mutation {
+  shorten(input: ShortenInput!): URL!
+}
