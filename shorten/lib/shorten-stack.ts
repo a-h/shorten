@@ -17,17 +17,14 @@ export class ShortenStack extends cdk.Stack {
       schema: appsync.Schema.fromAsset("./graphql/schema.graphql"),
       xrayEnabled: true,
     });
-
     // print out the AppSync GraphQL endpoint to the terminal
     new cdk.CfnOutput(this, "GraphQLAPIURL", {
       value: api.graphqlUrl,
     });
-
     // print out the AppSync API Key to the terminal
     new cdk.CfnOutput(this, "GraphQLAPIKey", {
       value: api.apiKey || "",
     });
-
     // print out the stack region
     new cdk.CfnOutput(this, "Stack Region", {
       value: this.region,
@@ -79,6 +76,8 @@ export class ShortenStack extends cdk.Stack {
     new codedeploy.LambdaDeploymentGroup(this, "canaryDeployment", {
       application,
       alias: version1Alias,
+      //TODO: Use a CloudWatch alarm as an advanced option, see https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-groups-configure-advanced-options.html
+      // alarms: //TODO,
       deploymentConfig:
         codedeploy.LambdaDeploymentConfig.LINEAR_10PERCENT_EVERY_1MINUTE,
     });
