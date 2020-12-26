@@ -46,3 +46,5 @@ import { AppSyncResolverEvent } from "aws-lambda";
 ```
 
 AppSyncResolverEvent is a generic that contains the "arguments" type.
+
+It is a requirements to build the app with `npm build` before deploying it, CDK won't magically build it for you.
