@@ -48,3 +48,13 @@ import { AppSyncResolverEvent } from "aws-lambda";
 AppSyncResolverEvent is a generic that contains the "arguments" type.
 
 It is a requirements to build the app with `npm build` before deploying it, CDK won't magically build it for you.
+
+Next, I used https://graphql-code-generator.com/docs/getting-started/installation to automatically build the types from the GraphQL schema, much better than doing it yourself.
+
+Just do an `npm run graphql-codegen` to build the type definitions.
+
+When testing, I couldn't find a quick alternative to `sls logs -f <function_name>` in the CDK, but I did find https://github.com/jorgebastida/awslogs. This lets me used `awslogs groups`, then `awslogs get /aws/lambda/ShortenStack-mutationShortenLambdaBC1758AD-6KW0KAD3TYVE -s 10m` to see a tidy set of logs.
+
+With that in place, I was able to swap out the implementation for auto-generated types.
+
+I then added a DynamoDB example.

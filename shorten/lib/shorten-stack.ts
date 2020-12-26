@@ -1,8 +1,8 @@
 import * as cdk from "@aws-cdk/core";
 import * as appsync from "@aws-cdk/aws-appsync";
-//import * as db from "@aws-cdk/aws-dynamodb";
+import * as db from "@aws-cdk/aws-dynamodb";
 import * as lambda from "@aws-cdk/aws-lambda";
-import * as path from "path";
+import {BillingMode} from "@aws-cdk/aws-dynamodb";
 
 export class ShortenStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -33,32 +33,36 @@ export class ShortenStack extends cdk.Stack {
       value: this.region,
     });
 
+    // Create a Lambda and DynamoDB table.
     const mutationShortenLambda = new lambda.Function(
       this,
       "mutationShortenLambda",
       {
         runtime: lambda.Runtime.NODEJS_12_X,
-        // The code is in lambda-functions.ts
         handler: "index.handler",
         code: lambda.Code.fromAsset("./functions"),
         memorySize: 1024,
       }
     );
+    // Add a database table and grant read/write access to the Lambda.
+    const shortenDb = new db.Table(this, "shortenDb", {
+      partitionKey: {
+        name: "_id",
+        type: db.AttributeType.STRING,
+      },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+    });
+    shortenDb.grantReadWriteData(mutationShortenLambda);
+    mutationShortenLambda.addEnvironment("DYNAMO_TABLE", shortenDb.tableName);
+
+    // Set up the Lambda to handle the mutation part of the GraphQL.
     const mutationShortenLambdaDS = api.addLambdaDataSource(
       "mutationShortenLambda",
       mutationShortenLambda
     );
-
     mutationShortenLambdaDS.createResolver({
       typeName: "Mutation",
       fieldName: "shorten",
     });
-
-    //const shortenDb = new db.Table(this, "shortenDb", {
-    //partitionKey: {
-    //name: "_id",
-    //type: db.AttributeType.STRING,
-    //},
-    //});
   }
 }
